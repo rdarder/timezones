@@ -156,7 +156,7 @@ class TestTimezonesCrud(Base):
     self.basic_user()
     self.assertOk(client.create(
       'timezones',
-      dict(city='Rosario', gmt_delta_seconds=-1440)
+      dict(city='Rosario', name="ART", gmt_delta_seconds=-1440)
     ))
 
     timezones = client.list('timezones').json()
@@ -167,7 +167,7 @@ class TestTimezonesCrud(Base):
   def testDeleteExisting(self):
     self.basic_user()
     t = client.create('timezones',
-                      dict(city='Rosario', gmt_delta_seconds=-1440))
+                      dict(city='Rosario', name="ART", gmt_delta_seconds=-1440))
     timezone_id = t.json()['id']
     r = client.delete('timezones', timezone_id)
     self.assertOk(r)
@@ -175,7 +175,7 @@ class TestTimezonesCrud(Base):
   def testDeleteTwiceSucceedOnce(self):
     self.basic_user()
     t = client.create('timezones',
-                      dict(city='Rosario', gmt_delta_seconds=-1440))
+                      dict(city='Rosario', name="ART", gmt_delta_seconds=-1440))
     timezone_id = t.json()['id']
     r = client.delete('timezones', timezone_id)
     self.assertOk(r)
@@ -184,7 +184,7 @@ class TestTimezonesCrud(Base):
 
   def testUpdateSimple(self):
     self.basic_user()
-    base = dict(city='Rosario', gmt_delta_seconds=-1440)
+    base = dict(city='Rosario', name="ART", gmt_delta_seconds=-1440)
     t = client.create('timezones', base)
     id = t.json()['id']
     base.update(city='New York')
@@ -205,7 +205,7 @@ class TestTimezoneOwnership(Base):
     self.assertOk(client.create('users', dict(login='test1', password='pass1')))
     self.assertOk(client.create('users', dict(login='test2', password='pass2')))
     client.login('test1', 'pass1')
-    c = client.create('timezones', dict(city='Rosario',
+    c = client.create('timezones', dict(city='Rosario', name="ART",
                                         gmt_delta_seconds=-1440))
     id1 = c.json()['id']
     client.logout()

@@ -31,11 +31,12 @@
     currentTimeService.resume();
   }]);
 
-  app.run(['$rootScope', '$location', function ($rootScope, $location) {
-    $rootScope.$on('$routeChangeStart', function (event) {
-      console.log(event);
-    })
-  }]);
+  /*  app.run(['$rootScope', '$location', function ($rootScope, $location) {
+   $rootScope.$on('$routeChangeStart', function (event) {
+   console.log(event);
+   })
+   }]);
+   */
   app.run(['$rootScope', 'TimezoneService', '$location',
     function ($rootScope, svc, $location) {
       $rootScope.clearErrors = function () {

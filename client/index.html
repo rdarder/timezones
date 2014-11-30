@@ -10,11 +10,12 @@
 </head>
 <body ng-app="timezones">
 <script type="text/ng-template" id="register.html">
+  <div ng-include="'errors.html'"></div>
   <form>
     <input type="text" ng-model="user.name" placeholder="Full Name">
     <input type="text" ng-model="user.login" placeholder="Login">
     <input type="password" ng-model="user.password" placeholder="Password">
-    <input type="password" ng-mdoel="user.check_password"
+    <input type="password" ng-model="user.check_password"
            placeholder="Verify Password">
     <button class="btn" ng-click="register()">Register</button>
   </form>

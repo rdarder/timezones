@@ -112,6 +112,7 @@
         var token = svc.getToken();
         if (token === null) {
           self.user = null;
+          return;
         }
         var claim = JSON.parse(atob(token.split('.')[1]));
         self.user = claim.user;
@@ -140,13 +141,16 @@
       self.user = {
         name:           '',
         login:          '',
-        email:          '',
         password:       '',
         check_password: ''
       };
       //TODO: Validate password match
-      //TODO: clear errors on retry
       self.register = function () {
+        self.clearErrors();
+        if (self.user.password !== self.user.check_password) {
+          self.errors.push({description: 'Passwords do not match'});
+          return;
+        }
         svc.registerUser(self.user).then(function () {
           self.clearErrors();
           svc.login(self.user.login, self.user.password).then(function () {
@@ -175,6 +179,7 @@
         $location.path('/timezones/edit/' + self.timezones[index].id)
       };
       self.remove = function (index) {
+        self.clearErrors();
         svc.remove(self.timezones[index].id).then(function () {
           self.clearErrors();
           self.timezones.splice(index, 1);
@@ -195,6 +200,7 @@
         gmt_delta_seconds: 0
       };
       self.save = function (editor) {
+        self.clearErrors();
         if (editor.$invalid) {
           return;
         }
@@ -208,6 +214,7 @@
   app.controller("timezones.edit", ['$scope', 'TimezoneService', '$location',
     '$routeParams',
     function (self, svc, $location, $routeParams) {
+      self.clearErrors();
       svc.get($routeParams.id).then(function (timezone) {
         self.clearErrors();
         self.timezone = timezone;
@@ -215,6 +222,7 @@
         $location.path('/timezones')
       });
       self.save = function (editor) {
+        self.clearErrors();
         if (editor.$invalid) {
           return;
         }

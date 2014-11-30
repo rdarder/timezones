@@ -31,6 +31,27 @@
     currentTimeService.resume();
   }]);
 
+  app.run(['$rootScope', '$location', function ($rootScope, $location) {
+    $rootScope.$on('$routeChangeStart', function (event) {
+      console.log(event);
+    })
+  }]);
+  app.run(['$rootScope', 'TimezoneService', '$location',
+    function ($rootScope, svc, $location) {
+      $rootScope.clearErrors = function () {
+        $rootScope.errors = [];
+      };
+      $rootScope.clearErrors();
+      $rootScope.$on('TimezoneServiceError', function (event, response) {
+        $rootScope.errors.push(response.data);
+        if (response.status === 401) {
+          svc.logout();
+          $location.path('/login');
+        }
+      });
+    }
+  ]);
+
 
   app.factory('CurrentTimeService', ['$rootScope', '$timeout',
     function ($rootScope, $timeout) {
@@ -70,22 +91,38 @@
   };
 
 
-  app.factory('TimezoneService', ['$http', '$q', '$window', function ($http, $q, $window) {
-    return new TimezoneService($http, $q, $window)
-  }]);
+  app.factory('TimezoneService', ['$http', '$q', '$window', '$rootScope',
+    function ($http, $q, $window, $rootScope) {
+      return new TimezoneService($http, $q, $window, $rootScope)
+    }
+  ]);
 
   app.controller('auth', ['$scope', '$location', 'TimezoneService',
     function (self, $location, svc) {
-      if (svc.isLoggedIn()) {
+      if ($location.path === '/login' && svc.isLoggedIn()) {
         $location.path('/timezones');
       }
-      self.login_info = {
-        ĺogin:    '',
-        password: ''
+      self.clearLoginInfo = function () {
+        self.login_info = {
+          ĺogin:    '',
+          password: ''
+        };
+      };
+      self.updateUser = function () {
+        var token = svc.getToken();
+        if (token === null) {
+          self.user = null;
+        }
+        var claim = JSON.parse(atob(token.split('.')[1]));
+        self.user = claim.user;
       };
       self.do_login = function () {
+        self.clearErrors();
         svc.login(self.login_info.login, self.login_info.password).then(
           function () {
+            self.clearLoginInfo();
+            self.updateUser();
+            self.clearErrors();
             $location.path('/timezones');
           }
         );
@@ -93,11 +130,13 @@
       self.logout = function () {
         svc.logout();
         $location.path('/login');
-      }
+      };
+      self.clearLoginInfo();
+      self.updateUser();
     }]);
 
-  app.controller("user", ['$scope', 'TimezoneService', 'AuthService',
-    function (self, svc, auth) {
+  app.controller("register", ['$scope', 'TimezoneService', '$location',
+    function (self, svc, $location) {
       self.user = {
         name:           '',
         login:          '',
@@ -108,8 +147,11 @@
       //TODO: Validate password match
       //TODO: clear errors on retry
       self.register = function () {
-        svc.register(self.user).then(function () {
-          auth.login(self.user.login, self.user.password);
+        svc.registerUser(self.user).then(function () {
+          self.clearErrors();
+          svc.login(self.user.login, self.user.password).then(function () {
+            $location.path('/timezones');
+          });
         });
       };
     }]);
@@ -119,14 +161,14 @@
     '$routeParams',
     function (self, svc, $location, $routeParams) {
       self.query = $routeParams.q || '';
-      self.list = function () {
-        var query = self.query;
+      self.list = function (query) {
         if (query === undefined || query === '') {
           query = null;
         }
-        svc.list(self.query).then(function (timezones) {
+        svc.list(query).then(function (timezones) {
           $location.search('q', query);
           self.timezones = timezones;
+          self.filter_query = query;
         });
       };
       self.edit = function (index) {
@@ -134,6 +176,7 @@
       };
       self.remove = function (index) {
         svc.remove(self.timezones[index].id).then(function () {
+          self.clearErrors();
           self.timezones.splice(index, 1);
         });
       };
@@ -151,8 +194,12 @@
         city:              '',
         gmt_delta_seconds: 0
       };
-      self.save = function () {
+      self.save = function (editor) {
+        if (editor.$invalid) {
+          return;
+        }
         svc.create(self.timezone).then(function () {
+          self.clearErrors();
           $location.path('/timezones');
         });
       }
@@ -162,10 +209,17 @@
     '$routeParams',
     function (self, svc, $location, $routeParams) {
       svc.get($routeParams.id).then(function (timezone) {
+        self.clearErrors();
         self.timezone = timezone;
+      }, function () {
+        $location.path('/timezones')
       });
-      self.save = function () {
-        svc.create(self.timezone).then(function () {
+      self.save = function (editor) {
+        if (editor.$invalid) {
+          return;
+        }
+        svc.update(self.timezone).then(function () {
+          self.clearErrors();
           $location.path('/timezones');
         });
       }
@@ -178,17 +232,18 @@
     };
   });
 
-  function TimezoneService(http, $q, $window) {
+  function TimezoneService(http, $q, $window, $rootScope) {
     var self = this;
     self.http = http;
     self.$q = $q;
+    self.$rootScope = $rootScope;
     self.sessionStorage = $window.sessionStorage;
     self.localStorage = $window.localStorage;
-    self.errors = [];
     self._token = null;
   }
 
   TimezoneService.prototype.req = function (method, url, data, headers) {
+    var self = this;
     var req = {
       method:  method,
       url:     url,
@@ -196,7 +251,11 @@
       headers: headers
     };
     return this.http(req).then(function (response) {
+      self.$rootScope.$emit('TimezoneServiceSuccess', response);
       return response.data;
+    }, function (response) {
+      self.$rootScope.$emit('TimezoneServiceError', response);
+      return self.$q.reject(response);
     });
   };
 
@@ -215,6 +274,16 @@
       this.sessionStorage.getItem('auth_token') ||
       this.localStorage.getItem('auth_token')
       );
+  };
+  TimezoneService.prototype.getUser = function () {
+    var token = this.getToken();
+    if (token === null) {
+      return null;
+    } else {
+      var fragments = token.split('.');
+      var claim = fragments[1];
+      return claim.user;
+    }
   };
   TimezoneService.prototype.isLoggedIn = function () {
     return (this.getToken() !== null);
@@ -254,7 +323,7 @@
 
   TimezoneService.prototype.list = function (query) {
     var path = '/timezones';
-    if (query !== '') {
+    if (query !== null && query !== '') {
       path += '?q=' + encodeURIComponent(query);
     }
     return this.auth_req('GET', path);
@@ -269,10 +338,71 @@
   TimezoneService.prototype.remove = function (id) {
     return this.auth_req('DELETE', this.id_ref('/timezones', id));
   };
-  TimezoneService.prototype.update = function (id, data) {
-    return this.auth_req('PUT', this.id_ref('/timezones', id), data);
+  TimezoneService.prototype.update = function (data) {
+    return this.auth_req('PUT', this.id_ref('/timezones', data.id), data);
   };
 
+
+  app.directive('tzDelta', function () {
+    var parser_regex = /^([+-])?([0-9]{1,2})(?::([0-9]{1,2}))?$/;
+    return {
+      require: 'ngModel',
+      link:    function (scope, elm, attrs, ctrl) {
+        ctrl.$parsers.push(function (viewValue) {
+          if (viewValue === "") {
+            ctrl.$setValidity('tzDelta', true);
+            return 0;
+          }
+          match = viewValue.match(parser_regex);
+          if (match === null) {
+            ctrl.$setValidity('tzDelta', false);
+            return null;
+          }
+          var sign = (match[1] === '-' ? -1 : 1);
+          var hours = parseInt(match[2]);
+          var minutes;
+          if (match[3] !== undefined) {
+            minutes = parseInt(match[3]);
+          } else {
+            minutes = 0;
+          }
+          if (minutes >= 60) {
+            ctrl.$setValidity('tzDelta', false);
+            return null;
+          }
+          ctrl.$setValidity('tzDelta', true);
+          return sign * (hours * 60 + minutes) * 60;
+        });
+        ctrl.$formatters.push(format_delta);
+      }
+    };
+  });
+
+  var format_delta = function (value) {
+    var base;
+    if (value < 0) {
+      value = -value;
+      base = "-";
+    } else {
+      base = "+";
+    }
+    var minutes = Math.floor(value / 60);
+    var hours = Math.floor(minutes / 60);
+    minutes = minutes % 60;
+    if (hours === 0 && minutes === 0) {
+      return "";
+    }
+    base += hours.toString();
+    if (minutes > 0) {
+      base += ':' + minutes.toString();
+    }
+    return base;
+  };
+  app.filter('tzDelta', function () {
+    return function (value) {
+      return "GMT " + format_delta(value);
+    }
+  });
   app.directive("analogClock", function () {
     return {
       link:     function (scope, element, attrs) {
@@ -351,7 +481,7 @@
 
     this.drawHand(minute * Math.PI / 30, size / 40, size / 3,
       colors.main.solid[1]);
-    this.drawHand(Math.PI / 2 + hour * Math.PI / 6, size / 25, size / 3.5,
+    this.drawHand(hour * Math.PI / 6, size / 25, size / 3.5,
       colors.main.solid[3]);
     this.drawHand(second * Math.PI / 30, size / 100, size / 2.5,
       colors.comp.solid[2]);

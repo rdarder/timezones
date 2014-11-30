@@ -8,8 +8,9 @@ class TokenAuthentication(object):
     self.ttl = token_ttl
     self.provide_request = provide_request
 
-  def generate_token(self, user_id):
-    claim = dict(user_id=user_id, exp=datetime.datetime.utcnow() + self.ttl)
+  def generate_token(self, user):
+    user_info = dict(id=user.id, login=user.login, name=user.name)
+    claim = dict(user=user_info, exp=datetime.datetime.utcnow() + self.ttl)
     return jwt.encode(claim, self.secret)
 
   def get_claim(self, request):
@@ -25,7 +26,7 @@ class TokenAuthentication(object):
     claim = self.get_claim(self.provide_request())
     if claim is None:
       return None
-    user_id = claim.get('user_id')
+    user_id = claim.get('user', {}).get('id')
     if not isinstance(user_id, int):
       return None
     else:

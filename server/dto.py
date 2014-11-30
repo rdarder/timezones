@@ -30,7 +30,7 @@ class UserDto(object):
       errors.append(('login', 'must be shorter than 50 characters'))
     elif len(login) < 5:
       errors.append(("login", 'must be at least 5 characters long'))
-    if not self.alpha_re.match(login):
+    elif not self.alpha_re.match(login):
       errors.append(("login", "must begin followed by alphanumerics"))
     password = msg.get('password')
     if password is None:

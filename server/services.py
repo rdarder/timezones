@@ -107,7 +107,7 @@ class AuthService(object):
       user = session.query(User).filter(User.login == msg['login']).first()
       if user is not None and self.password_manager.verify(msg['password'],
                                                            user.password):
-        return dict(token=self.auth.generate_token(user.id))
+        return dict(token=self.auth.generate_token(user))
       else:
         return Errors.Unauthorized
 

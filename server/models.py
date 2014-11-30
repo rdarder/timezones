@@ -20,4 +20,4 @@ class Timezone(Base):
   user_id = Column(Integer, ForeignKey('users.id'))
   user = relationship("User")
   gmt_delta_seconds = Column(Integer)
-  city = Column(String(200))
+  city = Column(String(50))

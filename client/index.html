@@ -12,7 +12,6 @@
 <script type="text/ng-template" id="register.html">
   <form>
     <input type="text" ng-model="user.name" placeholder="Full Name">
-    <input type="text" ng-model="user.email" placeholder="Email">
     <input type="text" ng-model="user.login" placeholder="Login">
     <input type="password" ng-model="user.password" placeholder="Password">
     <input type="password" ng-mdoel="user.check_password"
@@ -21,44 +20,76 @@
   </form>
 </script>
 <script type="text/ng-template" id="login.html">
+  <div ng-include="'errors.html'"></div>
   <form>
     <input type="text" ng-model="login_info.login">
     <input type="password" ng-model="login_info.password">
     <button class="btn" ng-click="do_login()">Login</button>
-    <a class="btn" href="/register">Register</a>
+    <a class="btn" href="#/register">Register</a>
   </form>
 </script>
 
 <script type="text/ng-template" id="timezones.list.html">
   <div ng-include="'header.html'"></div>
+  <div>Timezones
+      <span ng-show="filter_query">
+        "{{filter_query}}"
+        <button ng-click="list()">All</button>
+      </span>
+  </div>
   <input type="text" ng-model="query">
-  <button ng-click="list()">Search</button>
+  <button ng-click="list(query)">Search</button>
   <div ng-repeat="tz in timezones">
     <span analog-clock
           time="currentTime|adjustTime:tz.gmt_delta_seconds"></span>
     <span>{{tz.city}}</span>
-    <span>{{tz.gmt_delta_seconds}}</span>
+    <span>{{tz.gmt_delta_seconds|tzDelta}}</span>
     <span>{{currentTime|adjustTime:tz.gmt_delta_seconds|date:'short'}}</span>
     <a href ng-click="remove($index)">Remove</a>
-    <a href ng-click="edit($index)">Edit</a>
+    <a href="#/timezones/edit/{{tz.id}}">Edit</a>
   </div>
   <button ng-click="create()">New Timezone</button>
 </script>
 
 <script type="text/ng-template" id="timezones.edit.html">
   <div ng-include="'header.html'"></div>
-  <form>
+  <form name="editor" novalidate>
+    <ul ng-show="editor.$submitted">
+      <li ng-show="editor.city.$error.required">Enter a city name</li>
+      <li ng-show="editor.delta.$error.tzDelta">Invalid offset: [+-]HH:MM</li>
+    </ul>
     <input type="hidden" ng-model="timezone.id">
-    <input type="text" ng-model="timezone.city" placeholder="City">
-    <input type="number" ng-model="timezone.gmt_delta_seconds">
-    <button class="btn" ng-click="save()">Save</button>
+    <input type="text" name="city" required ng-model="timezone.city"
+           placeholder="City">
+    <input tz-delta type="text"
+           name="delta" ng-model="timezone.gmt_delta_seconds">
+
+    <input class="btn" type="submit" ng-click="save(editor)" value="Save">
   </form>
 </script>
 
 <script type="text/ng-template" id="header.html">
-  <a ng-controller="auth" ng-click="logout()">Logout</a>
+  <div ng-controller="auth">
+    <span>{{user.name}} ({{user.login}})</span>
+    <a ng-click="logout()">Logout</a>
+  </div>
+  <div ng-include="'errors.html'"></div>
 </script>
 
+
+<script type="text/ng-template" id="errors.html">
+  <ul ng-show="errors.length > 0">
+    <li ng-repeat="error in errors">{{error.description}}
+      <ul
+          ng-show="error.description == 'Validation Error'"
+          ng-repeat=" detail in error.details">
+        <li ng-repeat="(field, desc) in detail">
+          {{field}}: <span ng-repeat="sentence in desc">{{sentence}}.</span>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</script>
 <div ng-view></div>
 </body>
 

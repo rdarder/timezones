@@ -159,6 +159,7 @@
           });
         });
       };
+      self.clearErrors();
     }]);
 
 
@@ -198,6 +199,7 @@
     function (self, svc, $location) {
       self.timezone = {
         city:              '',
+        name:              '',
         gmt_delta_seconds: 0
       };
       self.save = function (editor) {

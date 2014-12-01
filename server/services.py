@@ -3,6 +3,7 @@ import json
 from models import User, Timezone
 from sqlalchemy.exc import IntegrityError
 from werkzeug.wrappers import Response
+import sqlalchemy as sa
 
 
 class Errors(object):
@@ -176,7 +177,11 @@ class TimezoneService(AuthMixin):
       query = request.args.get('q')
       if query is not None and isinstance(query, basestring) and len(query) > 0:
         timezones = timezones.filter(
-          Timezone.city.contains(query))
+          sa.or_(
+            Timezone.city.contains(query),
+            Timezone.name.contains(query)
+          )
+        )
       return [self.timezone_dto.to_msg(t) for t in timezones]
 
   def delete(self, args, request):

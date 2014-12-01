@@ -21,3 +21,4 @@ class Timezone(Base):
   user = relationship("User")
   gmt_delta_seconds = Column(Integer)
   city = Column(String(50))
+  name = Column(String(50))

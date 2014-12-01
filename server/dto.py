@@ -98,7 +98,8 @@ class TimezoneDto(object):
     return dict(
       id=timezone.id,
       gmt_delta_seconds=timezone.gmt_delta_seconds,
-      city=timezone.city
+      city=timezone.city,
+      name=timezone.name
     )
 
   def validate(self, msg):
@@ -120,8 +121,19 @@ class TimezoneDto(object):
       errors.append(('city', 'must be a string'))
     elif len(city) == 0:
       errors.append(('city', 'must not be empty'))
-    elif len(city) > 200:
-      errors.append(('city', 'must be shorter than 200 characters'))
+    elif len(city) > 50:
+      errors.append(('city', 'must be shorter than 50 characters'))
+
+    name = msg.get('name')
+    if name is None:
+      errors.append(('name', 'is missing'))
+    elif not isinstance(name, basestring):
+      errors.append(('name', 'must be a string'))
+    elif len(city) == 0:
+      errors.append(('name', 'must not be empty'))
+    elif len(city) > 50:
+      errors.append(('name', 'must be shorter than 50 characters'))
+
     return errors
 
   def validate_ref_args(self, args):
@@ -143,3 +155,4 @@ class TimezoneDto(object):
   def populate(self, timezone, msg):
     timezone.gmt_delta_seconds = msg["gmt_delta_seconds"]
     timezone.city = msg['city']
+    timezone.name = msg['name']

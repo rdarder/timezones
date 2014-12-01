@@ -94,8 +94,8 @@
   </div>
   <div class="row">
     <div class="col-md-3" ng-repeat="tz in timezones">
-      <h2>{{tz.city}}</h2>
-      <h4>{{tz.gmt_delta_seconds|tzDelta}}
+      <h2>{{tz.name}} {{tz.gmt_delta_seconds|tzDelta}}</h2>
+      <h4>{{tz.city}}
         <a href
            ng-click="remove($index)"><i
             class="glyphicon glyphicon-remove"></i></a>
@@ -115,12 +115,19 @@
   <div class="row">
     <div class="col-md-4 col-md-offset-4">
       <ul ng-show="editor.$submitted">
+        <li ng-show="editor.name.$error.required">Enter a Name</li>
         <li ng-show="editor.city.$error.required">Enter a city name</li>
         <li ng-show="editor.delta.$error.tzDelta">Invalid offset: [+-]HH:MM</li>
       </ul>
       <form name="editor" role="form" novalidate>
         <input type="hidden" ng-model="timezone.id">
 
+        <div class="form-group">
+          <label for="name">Name</label>
+          <input id="name" type="text" name="name" required
+                 ng-model="timezone.name"
+                 class="form-control">
+        </div>
         <div class="form-group">
           <label for="city">City</label>
           <input id="city" type="text" name="city" required

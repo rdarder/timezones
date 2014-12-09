@@ -213,7 +213,8 @@ class TestTimezoneOwnership(Base):
     self.assertNotFound(client.get('timezones', id1))
     self.assertNotFound(client.update('timezones', id1, dict()))
     self.assertNotFound(client.delete('timezones', id1))
-    c = client.create('timezones', dict(city='Cordoba', gmt_delta_seconds=-820))
+    c = client.create('timezones', dict(city='Cordoba',
+                                        name="CBA", gmt_delta_seconds=-820))
     id2 = c.json()['id']
     self.assertOk(client.get('timezones', id2))
     client.logout()
